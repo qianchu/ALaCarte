@@ -101,7 +101,10 @@ if __name__ == '__main__':
     raise(NotImplementedError)
 
   with open(vocabfile, 'r') as f:
-    vocab = [line.split(' ')[0] for line in f]
+    if '	' in f.readline():
+        vocab = [line.split('	')[0] for line in f]
+    else:
+        vocab = [line.split(' ')[0] for line in f]
     vocab.append(UNK)
 
   try:
