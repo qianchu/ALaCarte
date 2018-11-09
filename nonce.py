@@ -7,9 +7,9 @@ from ALaCarte.compute import *
 from ALaCarte.cooc import *
 
 
-COOCROOT = '/n/fs/nlpdatasets/ALaCache/Wiki' # output of running ALaCarte/cooc.py on Wikipedia (can get corpus from http://nlp.cs.princeton.edu/ALaCarte/corpora/)
+COOCROOT = 'ALaCarte/wiki_all' # output of running ALaCarte/cooc.py on Wikipedia (can get corpus from http://nlp.cs.princeton.edu/ALaCarte/corpora/)
 FILEDIR = os.path.dirname(os.path.realpath(__file__)) + '/'
-MODELFILE = '/n/fs/nlpdatasets/Nonce/wiki_all.model/wiki_all.sent.split.model' # obtain from http://clic.cimec.unitn.it/~aurelie.herbelot/wiki_all.model.tar.gz
+MODELFILE = './wiki_all.model/wiki_all.sent.split.model' # obtain from http://clic.cimec.unitn.it/~aurelie.herbelot/wiki_all.model.tar.gz
 MINCOUNT = 999
 
 
@@ -39,6 +39,8 @@ def nonces(model, w2v, C, X, words, counts):
   select = np.array([not word in nset for word in words])
   counts = counts[select]
   A = linear_transform(C[select][:,select], X[select], counts, weights=counts>MINCOUNT, fit_intercept=False, n_jobs=-1).coef_
+  A.astype(FLOAT).tofile('./ALaCarte/transform/nonce_samecorpus.bin')
+  A=load_transform('./ALaCarte/transform/nonce_samecorpus.bin',w2v)
   z = np.zeros(A.shape[0])
 
   write('Evaluating on Nonce Task\n') 
@@ -63,11 +65,27 @@ def eval_chimeras(w2v, probelists, ratlists, vectors):
     rhos.append(spearmanr(ratings, sims))
   write('\ravg rho='+str(np.mean(rhos))+'\n')
 
+def load_transform(Afile,model):
+    '''loads the transform from a text file
+    Args:
+    Afile: string; transform file name
+    Returns:
+    numpy array
+    '''
+    M = np.fromfile(Afile, dtype=FLOAT)
+    d = int(np.sqrt(M.shape[0]))
+    print (d)
+    assert d == next(iter(model.values())).shape[0], "induction matrix dimension and word embedding dimension must be the same"
+    M = M.reshape(d, d)
+  
+    return M
 
 def chimeras(model, w2v, C, X, counts):
 
   write('Computing Transform\n')
   A = linear_transform(C, X, counts, weights=counts>MINCOUNT, fit_intercept=False, n_jobs=-1).coef_
+  A.astype(FLOAT).tofile('./ALaCarte/transform/chimeras_samecorpus.bin')
+  A=load_transform('./ALaCarte/transform/chimeras_samecorpus.bin',w2v)
   z = np.zeros(model.vector_size)
   for n in [2, 4, 6]:
     write('Evaluating on Chimera-'+str(n)+' Task\n')
